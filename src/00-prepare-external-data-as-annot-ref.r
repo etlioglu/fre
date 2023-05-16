@@ -1,5 +1,5 @@
 # TODO
-# use the function for GSE123335 as well
+# use the function sce_create_qc_lognorm for GSE123335 as well
 
 # What does this script do?
 # 1) Reads count and annotation data as a SingleCellExperiment object
