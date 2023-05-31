@@ -87,8 +87,9 @@ sce_objects <- mclapply(
 
 ### cell cycle ###
 
-mm.pairs <- readRDS(system.file("exdata", "mouse_cycle_markers.rds", 
-    package="scran"))
+mm.pairs <- readRDS(system.file("exdata", "mouse_cycle_markers.rds",
+    package = "scran"
+))
 
 add_cell_cycle_score <- function(sce, mm.pairs) {
     assignments <- cyclone(
@@ -101,7 +102,6 @@ add_cell_cycle_score <- function(sce, mm.pairs) {
     colData(sce) <- cbind(colData(sce), assignments$scores)
 
     return(sce)
-    
 }
 
 sce_objects <- mclapply(
@@ -114,8 +114,8 @@ sce_objects <- mclapply(
 
 ### annotation ###
 
-e10_e11 <- readRDS("data/processed/dilbella_et_al_2021.rds")
-e14 <- readRDS("data/processed/loo_et_al_2019_e14.rds")
+dilbella <- readRDS("data/processed/dilbella_et_al_2021.rds")
+loo <- readRDS("data/processed/loo_et_al_2019_e14.rds")
 
 annotate_sce_wit_ref <- function(sce_object, ref, label_col_ref, label_col_target) {
     rownames(sce_object) <- rowData(sce_object)$Symbol
@@ -138,7 +138,7 @@ annotate_sce_wit_ref <- function(sce_object, ref, label_col_ref, label_col_targe
 sce_objects <- mclapply(
     X = sce_objects,
     FUN = annotate_sce_wit_ref,
-    ref = e14,
+    ref = loo,
     label_col_ref = "label",
     label_col_target = "loo_et_al_2019_annots",
     mc.cores = 32
@@ -149,7 +149,7 @@ sce_objects <- mclapply(
     FUN = annotate_sce_wit_ref,
     label_col_ref = "dibella_et_al_2021_annots",
     label_col_target = "dibella_et_al_2021_annots",
-    ref = e10_e11,
+    ref = dilbella,
     mc.cores = 32
 )
 
