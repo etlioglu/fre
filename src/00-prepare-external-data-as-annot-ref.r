@@ -20,11 +20,10 @@ setwd("/data/high-level-analyses")
 ### accessory functions ###
 
 sce_create_qc_lognorm <- function(count_matrix) {
-
     sce <- SingleCellExperiment(
         list(counts = count_matrix)
-    ) 
-    
+    )
+
     sce <- addPerCellQC(
         sce,
         subsets = list(
@@ -32,10 +31,10 @@ sce_create_qc_lognorm <- function(count_matrix) {
         )
     )
 
-    print("Mitochondrial genes found: ")
-    print(
-        rownames(sce)[grep("^mt-", rownames(sce))]
-    )
+    # print("Mitochondrial genes found: ")
+    # print(
+    #     rownames(sce)[grep("^mt-", rownames(sce))]
+    # )
 
     qc <- quickPerCellQC(
         colData(
@@ -43,7 +42,7 @@ sce_create_qc_lognorm <- function(count_matrix) {
             percent_subsets = c("subsets_mito_percent")
         )
     )
-    
+
     print(paste("Object pre-qc:", dim(sce)))
     sce <- sce[, which(!qc$discard)]
     print(paste("Object post-qc:", dim(sce)))
@@ -51,75 +50,92 @@ sce_create_qc_lognorm <- function(count_matrix) {
     sce <- logNormCounts(sce)
 
     return(sce)
-
 }
 
 ### GSE153164 ###
-
 # https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE153164
 
 # annotation file from https://singlecell.broadinstitute.org/single_cell/study/SCP1290/molecular-logic-of-cellular-diversification-in-the-mammalian-cerebral-cortex
-e10_e11_annot <- read.table(
+annots <- read.table(
     "data/external/GSE153164-metaData_scDevSC.txt",
     header = TRUE,
     sep = "\t",
     quote = ""
 )
-
 # removing the extra row stating column types
-e10_e11_annot <- e10_e11_annot[-1,]
+annots <- annots[-1, ]
 
-### E10 of GSE153164 ###
+# not all cell names in the annotations end with "-1", however, counts have this suffix
+annots$NAME[!(endsWith(annots$NAME, "-1"))] <- paste0(annots$NAME[!(endsWith(annots$NAME, "-1"))], "-1")
 
-e10_count <- Read10X_h5(
-    "data/external/GSM5277843_E10_v1_filtered_feature_bc_matrix.h5"
+
+file_names <- c(
+    "GSM5277843_E10_v1_filtered_feature_bc_matrix.h5",
+    "GSM4635072_E11_5_filtered_gene_bc_matrices_h5.h5",
+    "GSM4635073_E12_5_filtered_gene_bc_matrices_h5.h5",
+    "GSM4635074_E13_5_filtered_gene_bc_matrices_h5.h5",
+    "GSM4635075_E14_5_filtered_gene_bc_matrices_h5.h5",
+    "GSM4635076_E15_5_S1_filtered_gene_bc_matrices_h5.h5",
+    "GSM4635077_E16_filtered_gene_bc_matrices_h5.h5",
+    "GSM5277844_E17_5_filtered_feature_bc_matrix.h5",
+    "GSM4635078_E18_5_S1_filtered_gene_bc_matrices_h5.h5",
+    "GSM4635079_E18_S3_filtered_gene_bc_matrices_h5.h5",
+    "GSM4635080_P1_S1_filtered_gene_bc_matrices_h5.h5",
+    "GSM4635081_P1_S2_filtered_gene_bc_matrices_h5.h5",
+    "GSM5277845_P4_filtered_feature_bc_matrix.h5"
 )
-# count data do not have "sample prefixes" but plain cell IDs
-colnames(e10_count) <- paste0("E10_v1_", colnames(e10_count))
 
-e10_sce <- sce_create_qc_lognorm(e10_count)
+file_paths <- paste0("data/external/", file_names)
 
-# merge the count and annotation data
-common_cells <- intersect(
-    colnames(e10_sce),
-    e10_e11_annot$NAME
+sample_prefixes <- c(
+    "E10_v1",
+    "E11_5",
+    "E12_5",
+    "E13_5",
+    "E14_5",
+    "E15_5",
+    "E16_5",
+    "E17_5",
+    "E18_5_S1",
+    "E18_S3",
+    "P1_S1",
+    "P1_S2",
+    "P4"
 )
-e10_sce <- e10_sce[, common_cells]
-e10_annot <- e10_e11_annot[match(common_cells, e10_e11_annot$NAME), ] 
-if (all(rownames(colData(e10_sce)) == e10_annot$NAME)) {
-    print("Cell IDs OK!")
-    colData(e10_sce)$dibella_et_al_2021_annots <- e10_annot$New_cellType
-} else {
-    print("Cell IDs do not match!")
+
+
+# works for GSE153164, needs to be tweaked for other data sets
+read_and_sanitize_count_file <- function(file_path, prefix) {
+    count_data <- Read10X_h5(file_path)
+
+    # adding "sample prefixes" to count data
+    colnames(count_data) <- paste0(prefix, "_", colnames(count_data))
+
+    sce <- sce_create_qc_lognorm(count_data)
+
+    # merge the count and annotation data
+    common_cells <- intersect(
+        colnames(sce),
+        annots$NAME
+    )
+    sce <- sce[, common_cells]
+
+    print("Dimension of the SCE object")
+    print(prefix)
+    print(dim(sce))
+
+    annot <- annots[match(common_cells, annots$NAME), ]
+    if (all(rownames(colData(sce)) == annot$NAME)) {
+        print("Cell IDs OK!")
+        colData(sce)$dibella_et_al_2021_annots <- annot$New_cellType
+    } else {
+        print("Cell IDs do not match!")
+    }
+    return(sce)
 }
 
-### E11 of GSE153164 ###
-
-e11_count <- Read10X_h5(
-    "data/external/GSM4635072_E11_5_filtered_gene_bc_matrices_h5.h5"
-)
-# count data do not have "sample prefixes" but plain cell IDs
-colnames(e11_count) <- paste0("E11_5_", colnames(e11_count))
-# count data has a suffix ("-1") that is not present in the meta data
-colnames(e11_count) <- sub("-1", "", colnames(e11_count))
-
-e11_sce <- sce_create_qc_lognorm(e11_count)
-
-# merge the count and annotation data
-common_cells <- intersect(
-    colnames(e11_sce),
-    e10_e11_annot$NAME
-)
-e11_sce <- e11_sce[, common_cells]
-e11_annot <- e10_e11_annot[match(common_cells, e10_e11_annot$NAME), ] 
-if (all(rownames(colData(e11_sce)) == e11_annot$NAME)) {
-    print("Cell IDs OK!")
-    colData(e11_sce)$dibella_et_al_2021_annots <- e11_annot$New_cellType
-} else {
-    print("Cell IDs do not match!")
-}
-
-dilbella_et_al_2021 <- cbind(e10_sce, e11_sce)
+dilbella_et_al_2021_sce_objects <- mapply(read_and_sanitize_count_file, file_paths, sample_prefixes)
+dilbella_et_al_2021 <- Reduce(cbind, dilbella_et_al_2021_sce_objects)
 saveRDS(dilbella_et_al_2021, "data/processed/dilbella_et_al_2021.rds")
 
 ### GSE123335 ###
