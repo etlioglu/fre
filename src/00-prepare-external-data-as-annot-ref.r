@@ -5,6 +5,7 @@
 # 1) Reads count and annotation data as a SingleCellExperiment object
 # 2) Performs QC
 # 3) Log normalizes
+# Studies included: GSE153164, GSE123335
 
 # Output:
 # SCE objects with cell annotations
