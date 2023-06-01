@@ -87,9 +87,11 @@ sce_objects <- mclapply(
 
 ### cell cycle ###
 
-mm.pairs <- readRDS(system.file("exdata", "mouse_cycle_markers.rds",
-    package = "scran"
-))
+mm.pairs <- readRDS(
+    system.file("exdata", "mouse_cycle_markers.rds",
+        package = "scran"
+    )
+)
 
 add_cell_cycle_score <- function(sce, mm.pairs) {
     assignments <- cyclone(
